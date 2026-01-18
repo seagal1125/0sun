@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日光富御 全景導覽</title>
+
+    <!-- Open Graph / Social Media Meta Tags -->
+    <meta property="og:title" content="日光富御 | 全景導覽" />
+    <meta property="og:description" content="360 度全景瀏覽體驗" />
+    <meta property="og:image" content="./thumbnails/sun0118.jpg" />
+    <meta property="og:type" content="website" />
+    <!-- Pannellum CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css" />
+    <style>
+        body,
+        html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: "PingFang TC", "Microsoft JhengHei", sans-serif;
+            background-color: #000;
+        }
+
+        #panorama {
+            width: 100%;
+            height: 100%;
+        }
+
+        #controls {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px 20px;
+            border-radius: 8px;
+            color: white;
+            pointer-events: none;
+            /* Allow clicking through to the panorama */
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 500;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .pnlm-load-box {
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 999 !important;
+            /* Force on top */
+        }
+
+        .pnlm-lbar {
+            background-color: #4CAF50 !important;
+            /* Bright Green */
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+
+        .pnlm-lbar-fill {
+            background-color: #fff !important;
+        }
+
+        .pnlm-load-box p {
+            color: #fff !important;
+            font-size: 14px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="controls">
+        <h1 id="pano-title">日光富御</h1>
+    </div>
+
+    <div id="panorama"></div>
+
+    <!-- Pannellum Library -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+
+    <script>
+        // Helper to get params
+        function getQueryParam(param) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(param);
+        }
+
+        const imageFile = getQueryParam('image') || './sun0118.jpg';
+        document.getElementById('pano-title').innerText = imageFile;
+
+        pannellum.viewer('panorama', {
+            "type": "equirectangular",
+            "panorama": imageFile,
+            "autoLoad": true,
+            "autoRotate": -2,
+            "compass": true,
+            "showControls": true,
+            "title": "日光富御",
+            "author": "David",
+            "yaw": 0,
+            "pitch": 0,
+            "hfov": 100
+        });
+    </script>
+
+</body>
+
+</html>

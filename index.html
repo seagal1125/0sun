@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日光富御 | 全景地圖導覽</title>
+
+    <!-- Open Graph / Social Media Meta Tags -->
+    <meta property="og:title" content="日光富御 | 全景地圖導覽" />
+    <meta property="og:description" content="點擊查看日光富御周邊 360 度全景視野，包含地圖定位與歷史影像。" />
+    <meta property="og:image" content="./thumbnails/sun0118.jpg" />
+    <meta property="og:type" content="website" />
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #1a1a1a;
+            --sidebar-bg: #222;
+            --text-color: #eee;
+            --accent-color: #4CAF50;
+            --hover-bg: #333;
+        }
+
+        body,
+        html {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            overflow: hidden;
+            /* Prevent body scroll */
+        }
+
+        #container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        #sidebar {
+            width: 350px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid #333;
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.5);
+        }
+
+        #map-container {
+            flex-grow: 1;
+            position: relative;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+            z-index: 1;
+        }
+
+        /* Sidebar Header */
+        .sidebar-header {
+            padding: 20px;
+            background: linear-gradient(135deg, #1e1e1e 0%, #2a2a2a 100%);
+            border-bottom: 1px solid #333;
+        }
+
+        .sidebar-header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--accent-color);
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+
+        .sidebar-header p {
+            margin: 5px 0 0;
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+
+        /* Photo List */
+        #photo-list {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .photo-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #333;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-radius: 8px;
+            margin-bottom: 5px;
+        }
+
+        .photo-item:hover {
+            background-color: var(--hover-bg);
+        }
+
+        .photo-item.active {
+            background-color: rgba(76, 175, 80, 0.2);
+            border-left: 3px solid var(--accent-color);
+        }
+
+        .photo-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .photo-date {
+            font-size: 0.85rem;
+            color: #fb8c00;
+            /* Orange for date */
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .photo-name {
+            font-size: 1rem;
+            color: #fff;
+        }
+
+        .photo-coords {
+            font-size: 0.75rem;
+            color: #888;
+            margin-top: 2px;
+        }
+
+        /* Modal / Overlay for Pannellum */
+        #panorama-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 2000;
+            display: none;
+            /* Hidden by default */
+            flex-direction: column;
+        }
+
+        #panorama-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        #close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            color: black;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            z-index: 2001;
+            font-weight: bold;
+            border-radius: 5px;
+            font-family: inherit;
+        }
+
+        /* Scrollbar styles */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #222;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* Mobile Responsive Styles */
+        @media (max-width: 768px) {
+            #container {
+                flex-direction: column-reverse;
+            }
+
+            #sidebar {
+                width: 100%;
+                height: 45%;
+                /* List takes bottom 45% */
+                border-right: none;
+                border-top: 1px solid #333;
+            }
+
+            #map-container {
+                width: 100%;
+                height: 55%;
+                /* Map takes top 55% */
+            }
+
+            .sidebar-header {
+                padding: 10px 15px;
+                /* Compact header */
+            }
+
+            .sidebar-header h1 {
+                font-size: 1.2rem;
+            }
+
+            #close-btn {
+                top: 10px;
+                right: 10px;
+                padding: 12px 24px;
+                font-size: 1rem;
+                background: rgba(255, 255, 255, 0.9);
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="container">
+        <div id="sidebar">
+            <div class="sidebar-header">
+                <h1>日光富御</h1>
+                <p>全景導覽系統</p>
+            </div>
+            <div id="photo-list">
+                <!-- Items will be injected here via JS -->
+                <div style="padding:20px; text-align:center; color:#777;">
+                    正在載入資料...
+                </div>
+            </div>
+        </div>
+
+        <div id="map-container">
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <!-- Panorama Overlay -->
+    <div id="panorama-overlay">
+        <button id="close-btn" onclick="closePanorama()">關閉全景 (Close)</button>
+        <iframe id="panorama-frame" src=""></iframe>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        let map;
+        let markers = [];
+        let galleryData = [];
+
+        // Initialize Map
+        function initMap() {
+            // Updated default center to user's location
+            map = L.map('map').setView([24.841396, 120.977613], 15);
+
+            // Light-themed tiles (OpenStreetMap)
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors',
+                subdomains: 'abc',
+                maxZoom: 19
+            }).addTo(map);
+        }
+
+        // Load Data
+        async function loadData() {
+            try {
+                const response = await fetch('gallery_data.json?t=' + new Date().getTime());
+                galleryData = await response.json();
+                renderList(galleryData);
+                renderMarkers(galleryData);
+            } catch (error) {
+                console.error('Error loading gallery data:', error);
+                document.getElementById('photo-list').innerHTML = '<div style="padding:20px;color:red;">載入失敗，請確認已執行 scan_photos.py</div>';
+            }
+        }
+
+        // Render List
+        function renderList(data) {
+            const listContainer = document.getElementById('photo-list');
+            listContainer.innerHTML = '';
+
+            if (data.length === 0) {
+                listContainer.innerHTML = '<div style="padding:20px; text-align:center;">無照片資料</div>';
+                return;
+            }
+
+            data.forEach((item, index) => {
+                const el = document.createElement('div');
+                el.className = 'photo-item';
+                el.onclick = () => focusOnPhoto(index);
+                el.id = `photo-${index}`;
+
+                // Format nice date
+                const dateStr = item.date.replace(/:/g, '/').split(' ')[0]; // Simple YYYY/MM/DD
+                const timeStr = item.date.split(' ')[1] || '';
+                const thumbUrl = item.thumb || '';
+
+                el.innerHTML = `
+                <div style="margin-right:15px;">
+                    <img src="${thumbUrl}" style="width:80px; height:50px; object-fit:cover; border-radius:4px; background:#333;">
+                </div>
+                <div class="photo-info">
+                    <div class="photo-date">${dateStr} <span style="font-size:0.8em; color:#888;">${timeStr}</span></div>
+                    <div class="photo-name">${item.filename}</div>
+                </div>
+            `;
+                listContainer.appendChild(el);
+            });
+        }
+
+        let photoIndexToMarker = {}; // Map galleryData index to Leaflet marker
+
+        // Render Markers
+        function renderMarkers(data) {
+            // Clear existing
+            markers.forEach(m => map.removeLayer(m));
+            markers = [];
+            photoIndexToMarker = {};
+
+            if (data.length > 0) {
+                const group = new L.featureGroup();
+                const markersMap = new Map(); // Key: "lat,lon", Value: [{item, index}]
+
+                // Group data by location
+                data.forEach((item, index) => {
+                    const key = `${item.lat},${item.lon}`;
+                    if (!markersMap.has(key)) {
+                        markersMap.set(key, []);
+                    }
+                    markersMap.get(key).push({ item, index });
+                });
+
+                markersMap.forEach((items, key) => {
+                    const firstItem = items[0].item;
+                    let popupContent = '';
+
+                    if (items.length === 1) {
+                        // Single Photo
+                        const item = items[0].item;
+                        const thumbUrl = item.thumb || '';
+                        popupContent = `
+                        <div style="text-align:center;">
+                            <img src="${thumbUrl}" style="width:120px; height:80px; object-fit:cover; border-radius:4px; margin-bottom:5px;"><br>
+                            <b>${item.filename}</b><br>
+                            <span style="font-size:0.8em; color:#666;">${item.date}</span><br>
+                            <button onclick="openPanorama('${item.filename}')" style="margin-top:5px; width:100%; padding:5px; background:#4CAF50; color:white; border:none; border-radius:3px; cursor:pointer;">開啟全景</button>
+                        </div>
+                    `;
+                    } else {
+                        // Multiple Photos
+                        popupContent = `<div style="max-height:200px; overflow-y:auto; width:220px;">`;
+                        popupContent += `<div style="font-weight:bold; margin-bottom:8px; border-bottom:1px solid #ddd; padding-bottom:5px; position:sticky; top:0; background:white; z-index:1;">此處有 ${items.length} 張照片</div>`;
+
+                        items.forEach(entry => {
+                            const item = entry.item;
+                            const thumbUrl = item.thumb || '';
+                            popupContent += `
+                            <div style="display:flex; align-items:center; border-bottom:1px solid #eee; padding:8px 0; cursor:pointer;" onclick="openPanorama('${item.filename}')">
+                                <img src="${thumbUrl}" style="width:60px; height:40px; object-fit:cover; border-radius:3px; margin-right:10px;">
+                                <div style="font-size:0.85rem; text-align:left; color:#333;">
+                                    <div style="font-weight:500; margin-bottom:2px;">${item.filename}</div>
+                                    <div style="font-size:0.75em; color:#888;">${item.date.split(' ')[0]}</div>
+                                </div>
+                            </div>
+                        `;
+                        });
+                        popupContent += `</div>`;
+                    }
+
+                    const marker = L.marker([firstItem.lat, firstItem.lon])
+                        .addTo(map)
+                        .bindPopup(popupContent);
+
+                    // Map this marker to all contained items indices
+                    items.forEach(entry => {
+                        photoIndexToMarker[entry.index] = marker;
+                    });
+
+                    marker.on('click', () => {
+                        // Highlight the first item in the list
+                        highlightListItem(items[0].index);
+                    });
+
+                    markers.push(marker);
+                    group.addLayer(marker);
+                });
+
+                // If we have data, fly to the first one or fit bounds
+                if (data.length > 0) {
+                    map.fitBounds(group.getBounds(), { padding: [50, 50], maxZoom: 18 });
+                }
+            }
+        }
+
+        function focusOnPhoto(index) {
+            const item = galleryData[index];
+            map.flyTo([item.lat, item.lon], 18);
+
+            const marker = photoIndexToMarker[index];
+            if (marker) {
+                marker.openPopup();
+            }
+            highlightListItem(index);
+        }
+
+        function highlightListItem(index) {
+            document.querySelectorAll('.photo-item').forEach(el => el.classList.remove('active'));
+            const el = document.getElementById(`photo-${index}`);
+            if (el) {
+                el.classList.add('active');
+                el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }
+
+        // Expose to global for popup button
+        window.openPanorama = function (filename, updateHistory = true) {
+            const url = `view_panorama.html?image=${encodeURIComponent(filename)}`;
+            document.getElementById('panorama-frame').src = url;
+            document.getElementById('panorama-overlay').style.display = 'flex';
+
+            if (updateHistory) {
+                const newUrl = window.location.pathname + '?photo=' + encodeURIComponent(filename);
+                history.pushState({ photo: filename }, '', newUrl);
+            }
+        };
+
+        window.closePanorama = function (updateHistory = true) {
+            document.getElementById('panorama-overlay').style.display = 'none';
+            document.getElementById('panorama-frame').src = '';
+
+            if (updateHistory) {
+                history.pushState({}, '', window.location.pathname);
+            }
+        };
+
+        // Handle Browser Back/Forward
+        window.onpopstate = function (event) {
+            const params = new URLSearchParams(window.location.search);
+            const photo = params.get('photo');
+
+            if (photo) {
+                window.openPanorama(photo, false);
+            } else {
+                window.closePanorama(false);
+            }
+        };
+
+        // Initialize state based on URL
+        function checkInitialUrl(data) {
+            const params = new URLSearchParams(window.location.search);
+            const photo = params.get('photo');
+
+            if (photo) {
+                // Find if this photo exists in data to focus map logic if needed
+                const index = data.findIndex(item => item.filename === photo);
+                if (index !== -1) {
+                    focusOnPhoto(index); // This moves map to location
+                    window.openPanorama(photo, false); // Open without pushing state (it's already there)
+                }
+            }
+        }
+
+        // Initialize
+        initMap();
+        // Modify loadData to call checkInitialUrl
+        loadData().then(() => {
+            // Once data is loaded, check URL
+            checkInitialUrl(galleryData);
+        });
+
+    </script>
+</body>
+
+</html>
