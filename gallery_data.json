@@ -12,5 +12,12 @@
         "lat": 24.841396,
         "lon": 120.977613,
         "thumb": "thumbnails/sun0118.jpg"
+    },
+    {
+        "filename": "img2/1080419.JPG",
+        "date": "2018:08:05 17:07:22",
+        "lat": 24.16278,
+        "lon": 120.64056,
+        "thumb": "thumbnails/img2/1080419.JPG"
     }
 ]
